@@ -75,10 +75,11 @@ import socket
 import time
 
 
-def parse_mac(pkt, log=False):
+def parse_mac(pkt, pkt_info, log=False):
     """
     Parse the frame
     :param pkt: input frame (string)
+    :param pkt_info: pkt info such as encoding, snr, nomfreq, freqofs, dlt (dict)
     :param log: Print input
     :return: MAC parameters
     """
@@ -142,6 +143,10 @@ def parse_mac(pkt, log=False):
         payload = pkt[24:]
         info = {"packet": pkt, "tx_time": tx_time, "mac_add1": mac_da, "mac_add2": mac_sa, "N_SEQ": mac_seq,
                 "N_FRAG": mac_frag, "MF": mac_frag, "PAYLOAD": payload}
+
+    # Merge pkt_info into the final dict
+    if info != "":
+        info.update(pkt_info)
 
     return create_packet(header, info)
 

@@ -6,8 +6,10 @@
 # Generated: Mon Dec  4 10:45:34 2017
 ##################################################
 import struct
+import zmq
 
 import pmt
+from gnuradio import zeromq
 
 if __name__ == '__main__':
     import ctypes
@@ -365,7 +367,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         self.blocks_pdu_to_tagged_stream_0_0 = blocks.pdu_to_tagged_stream(blocks.complex_t, 'packet_len')
         self.blocks_multiply_const_vxx_0 = blocks.multiply_const_vcc((0.6,))
         (self.blocks_multiply_const_vxx_0).set_min_output_buffer(100000)
-        self.blocks_socket_pdu_0 = blocks.socket_pdu("TCP_CLIENT", hostname, str(options.PHYRXport))
+        self.zeromq_push_msg_sink_0 = zeromq.push_msg_sink("tcp://127.0.0.1:%d" % options.PHYRXport, 100)
         self.msg_sink = blocks.message_sink(4, msgq, True)  # for CCA
 
         ##################################################
@@ -373,7 +375,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         ##################################################
         self.msg_connect((self.wifi_phy_hier_0, 'carrier'), (self.blocks_pdu_to_tagged_stream_0_0, 'pdus'))
         self.msg_connect((self.wifi_phy_hier_0, 'mac_out'), (self.ieee802_11_parse_mac_0, 'in'))
-        self.msg_connect((self.wifi_phy_hier_0, 'mac_out'), (self.blocks_socket_pdu_0, "pdus"))
+        self.msg_connect((self.wifi_phy_hier_0, 'mac_out'), (self.zeromq_push_msg_sink_0, 'in'))
         self.connect((self.blocks_multiply_const_vxx_0, 0), (self.foo_packet_pad2_0, 0))
         self.connect((self.blocks_pdu_to_tagged_stream_0_0, 0), (self.qtgui_const_sink_x_0, 0))
         self.connect((self.foo_packet_pad2_0, 0), (self.uhd_usrp_sink_0, 0))
@@ -495,21 +497,27 @@ class rx_client(threading.Thread):
         self.print_beacon = print_beacon
         self.short_beacon_info = short_beacon_info
 
-        self.phy_rx_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.phy_rx_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.phy_rx_server.bind((socket.gethostname(), PHYRXport))
-        self.phy_rx_server.listen(1)
+        self.context = zmq.Context()
+        self.results_receiver = self.context.socket(zmq.PULL)
+        self.results_receiver.connect("tcp://127.0.0.1:%d" % PHYRXport)
 
         self.running = True
 
     def run(self):
         print_msg("rx_client starts to check received packets from PHY (class wifi_transceiver)", self.node)
-        self.phy_rx_client, _ = self.phy_rx_server.accept()  # accept connections from outside
 
         while self.running:
             # PHY 802.11 frame arrival from the wireless medium
-            pkt = self.phy_rx_client.recv(10000)
-            arrived_packet = mac.parse_mac(pkt)
+            try:
+                raw_data = self.results_receiver.recv()
+                pmt_pair = pmt.deserialize_str(raw_data)
+                pkt_info = pmt.to_python(pmt.car(pmt_pair))  # Packet info, such as encoding, freq, freq_offset, ...
+                blob_data = pmt.to_python(pmt.cdr(pmt_pair))
+                pkt = "".join(chr(x) for x in blob_data)
+            except:
+                continue
+
+            arrived_packet = mac.parse_mac(pkt, pkt_info)
 
             if "DATA" == arrived_packet["HEADER"] or "DATA_FRAG" == arrived_packet["HEADER"]:  # DATA
                 if self.my_mac == arrived_packet["DATA"]["mac_add1"]:  # Is DATA addressed to this node?
@@ -578,18 +586,17 @@ class rx_client(threading.Thread):
                     while x > 0:
                         item = bcn.get()
                         print_msg("%s %d %s %d %s" % (
-                            mac.format_mac(item["MAC"]), item["timestamp"], item["BI"], item["OFFSET"], item["SSID"]), self.node)
+                            mac.format_mac(item["MAC"]), item["timestamp"], item["BI"], item["OFFSET"], item["SSID"]),
+                                  self.node)
                         bcn.put(item)
                         x -= 1
                 print_msg("=====================================", self.node)
 
     def stop(self):
         self.running = False
-        self.phy_rx_server.shutdown(socket.SHUT_RDWR)
-        self.phy_rx_server.close()
-        self.phy_rx_client.shutdown(socket.SHUT_RDWR)
-        self.phy_rx_client.close()
-        print_msg("rx_clients stops", self.node)
+        self.results_receiver.close()
+        self.context.term()
+        print_msg("Thread rx_clients() exits", self.node)
 
 
 class proc_mac_request(threading.Thread):
@@ -634,7 +641,10 @@ class proc_mac_request(threading.Thread):
         n_cca = 0  # Number of power measurements (0: disable carrier sensing)
 
         while self.running:
-            socket_client, _ = self.server.accept()  # Waiting a request from the MAC layer
+            try:
+                socket_client, _ = self.server.accept()  # Waiting a request from the MAC layer
+            except:
+                continue
             arrived_packet = plcp.receive_from_mac(socket_client)  # Packet received from MAC
 
             print_stat = False
@@ -741,6 +751,7 @@ class proc_mac_request(threading.Thread):
         self.running = False
         self.server.shutdown(socket.SHUT_RDWR)
         self.server.close()
+        print_msg("Thread proc_mac_request() exits", self.node)
 
 
 data = Queue()
