@@ -55,6 +55,8 @@ from optparse import OptionParser
 
 from gnuradio.eng_option import eng_option
 
+import uwicore_mac_utils as mac
+
 if __name__ == '__main__':
 
     parser = OptionParser(option_class=eng_option, conflict_handler="resolve")
@@ -66,12 +68,6 @@ if __name__ == '__main__':
                       help="Packet generation interval in seconds [default=%default]")
 
     (options, args) = parser.parse_args()
-
-
-    def create_packet(header, data):
-        packet = {"HEADER": header, "DATA": data}
-        return packet
-
 
     interval = options.interval
     pkt_num = options.pkt_num
@@ -94,13 +90,13 @@ if __name__ == '__main__':
 
         num = random.randint(0, 3)
         if num == 0:
-            pkt = create_packet("PAYLOAD", "TEST_1")
+            pkt = mac.create_packet("PAYLOAD", "TEST_1")
         elif num == 1:
-            pkt = create_packet("PAYLOAD", "TEST_2")
+            pkt = mac.create_packet("PAYLOAD", "TEST_2")
         elif num == 2:
-            pkt = create_packet("PAYLOAD", "TEST_3")
+            pkt = mac.create_packet("PAYLOAD", "TEST_3")
         elif num == 3:
-            pkt = create_packet("PAYLOAD", "TEST_4")
+            pkt = mac.create_packet("PAYLOAD", "TEST_4")
 
         packet = pickle.dumps(pkt, 1)
         s.send(packet)
