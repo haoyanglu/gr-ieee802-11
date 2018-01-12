@@ -274,9 +274,12 @@ def main():
                     WF_DATA_first_time = 1
                     state = "TRANSMITTING_ACK"
                     ack_addr = data_pkt["mac_add2"]  # address to respond
-                    print_msg("[R]-[DATA]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[""%s""]" % (
-                        mac.format_mac(data_pkt["mac_add1"]), mac.format_mac(data_pkt["mac_add2"]), data_pkt["N_SEQ"],
-                        data_pkt["PAYLOAD"]), node, print_data)
+                    print_msg(
+                        "[R]-[DATA]-[rate:%d]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[SNR:%f dB]-[NF:%f dB]-[FreqOff:%f]-[%s]" % (
+                            data_pkt['encoding'], mac.format_mac(data_pkt["mac_add1"]),
+                            mac.format_mac(data_pkt["mac_add2"]), data_pkt["N_SEQ"],
+                            data_pkt["snr"], data_pkt["noise_floor"], data_pkt["freqofs"], data_pkt["PAYLOAD"]), node,
+                        print_data)
                     print_msg("| IDLE | DATA received | %s |" % state, node, print_state_trans)
                     mac.send_ul_buff_packet(mac_port, data_pkt["packet"][24:])
                 else:  # Check upper layer buffer for data to send
@@ -577,10 +580,9 @@ def main():
             if WF_ACK_FG_first_time == 1:
                 T_ACK = SIFS
             ta1 = time.time()
-            no_packet, cts_pkt = mac.read_phy_response(phy_port, "ACK")
+            no_packet, ack_pkt = mac.read_phy_response(phy_port, "ACK")
             if no_packet == "YES":  # ACK addressed to this station
-                x = cts_pkt
-                print_msg("[R]-[ACK]-[DA:%s]-[IFM:1]" % mac.format_mac(x["RX_add"]), node, print_data)
+                print_msg("[R]-[ACK]-[DA:%s]-[IFM:1]" % mac.format_mac(ack_pkt["RX_add"]), node, print_data)
                 if fin_wait_ack_fragmented:  # Last fragment sent
                     state = "IDLE"
                     print_msg("| WAIT_ACK_FRAGMENTED | All fragments acknowledged  | %s |" % state, node,
@@ -617,17 +619,18 @@ def main():
             if WF_ACK_first_time:
                 T_ACK = t_ack_timeout
             ta = time.time()
-            no_packet, cts_pkt = mac.read_phy_response(phy_port, "ACK")
+            no_packet, ack_pkt = mac.read_phy_response(phy_port, "ACK")
             if no_packet == "YES":
-                x = cts_pkt
-                print_msg("[R]-[ACK]-[DA:%s]-[IFM:1]" % mac.format_mac(x["RX_add"]), node, print_data)
+                print_msg("[R]-[ACK]-[rate:%d]-[DA:%s]-[IFM:1]-[SNR:%f dB]-[NF:%f dB]-[FreqOff:%f]" % (
+                    ack_pkt['encoding'], mac.format_mac(ack_pkt["RX_add"]), ack_pkt['snr'], ack_pkt['noise_floor'], ack_pkt['freqofs']), node,
+                          print_data)
                 '''
                 #============================================================
                 # /TEST/ UNCOMMENT TO CHECK RTS/CTS FUNCTIONALITY
                 #============================================================
                 # STEP 4/4: Node 2 --> ACK
                 mac_ra = my_mac
-                values = {"duration":x["tx_time"], "mac_ra":mac_ra,"timestamp":time.time()}
+                values = {"duration":ack_pkt["tx_time"], "mac_ra":mac_ra,"timestamp":time.time()}
                 ACK_forced = mac.generate_pkt("ACK", t_sym, encoding_ctrl_frame, values)
                 packet_ACK_forced = mac.create_packet("PKT", ACK_forced)
                 mac.send_wo_response(packet_ACK_forced, phy_port)
@@ -724,44 +727,43 @@ def main():
             if WF_DATA_first_time == 1:
                 T_DATA = SIFS
             t_1 = time.time()
-            no_packet, cts_pkt = mac.read_phy_response(phy_port, "DATA")
+            no_packet, data_pkt = mac.read_phy_response(phy_port, "DATA")
             if no_packet == "YES":
-                x = cts_pkt  # DATA packet addressed to this station
                 '''
                 #============================================================
                 # /TEST/ UNCOMMENT TO CHECK RTS/CTS FUNCTIONALITY
                 #============================================================
                 # STEP 3/4: Node 1 --> DATA
-                values = {"payload":"Paquete_que_llega12", "address1":x["mac_add1"], "address2":x["mac_add2"], "N_SEQ":N_SEQ, "N_FRAG":0, "timestamp":time.time()}
+                values = {"payload":"Paquete_que_llega12", "address1":data_pkt["mac_add1"], "address2":data_pkt["mac_add2"], "N_SEQ":N_SEQ, "N_FRAG":0, "timestamp":time.time()}
                 DATA_forced = mac.generate_pkt("DATA", t_sym, encoding, values)
                 packet_DATA_forced = mac.create_packet("PKT", DATA_forced)
                 mac.send_wo_response(packet_DATA_forced, phy_port)
                 time.sleep(2*tslot)
                 #============================================================
                 '''
-                ack_addr = x["mac_add2"]
-                if x["MF"] == 0:  # More Fragments = 0
+                ack_addr = data_pkt["mac_add2"]
+                if data_pkt["MF"] == 0:  # More Fragments = 0
                     if fragmenting == 0:  # Not a fragmented packet
                         state = "TRANSMITTING_ACK"
                         print_msg("| WAITING_FOR_DATA | DATA received | %s |" % state, node, print_state_trans)
                         print_msg("[R]-[DATA]-[DA:%s]-[SA:%s]-[MF:0]-[IFM:1]-[""%s""]" % (
-                            mac.format_mac(x["mac_add1"]), mac.format_mac(x["mac_add2"]), x["PAYLOAD"]), node,
+                            mac.format_mac(data_pkt["mac_add1"]), mac.format_mac(data_pkt["mac_add2"]), data_pkt["PAYLOAD"]), node,
                                   print_data)
 
                         WF_DATA_first_time = 1
                         DATA_ok = 1
                         frag_count = 0
-                        mac.send_ul_buff_packet(mac_port, x["PAYLOAD"])
+                        mac.send_ul_buff_packet(mac_port, data_pkt["PAYLOAD"])
                     else:  # Last fragmented packet
                         fragmenting = 0
                         frag_count += 1
                         print_msg(
                             "[R]-[FRAGMENTED DATA]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[Frag#:%i]-[IFM:1]-[""%s""]" % (
-                                mac.format_mac(x["mac_add2"]), mac.format_mac(my_mac), x["N_SEQ"], x["N_FRAG"],
-                                x["PAYLOAD"]), node, print_data)
-                        test_seq = x["N_FRAG"] + 1 - frag_count
+                                mac.format_mac(data_pkt["mac_add2"]), mac.format_mac(my_mac), data_pkt["N_SEQ"], data_pkt["N_FRAG"],
+                                data_pkt["PAYLOAD"]), node, print_data)
+                        test_seq = data_pkt["N_FRAG"] + 1 - frag_count
                         if test_seq == 0:
-                            dato_leido = data_temp_reass + x["PAYLOAD"]
+                            dato_leido = data_temp_reass + data_pkt["PAYLOAD"]
                             state = "TRANSMITTING_ACK"
                             print_msg("| WAITING_FOR_DATA | DATA_FRAG received  (MF = 0)| %s |" % state,
                                       node, print_state_trans)
@@ -784,13 +786,13 @@ def main():
                     print_msg("| WAITING_FOR_DATA | DATA_FRAG received  (MF = 1)| TRANSMITTING_ACK |",
                               node, print_state_trans)
                     print_msg("[R]-[FRAGMENTED DATA]-[DA:%s]-[SA:%s]-[MF:1]-[Seq#:%i]-[Frag#:%i]-[IFM:1]-[""%s""]" % (
-                        mac.format_mac(x["mac_add2"]), mac.format_mac(my_mac), x["N_SEQ"], x["N_FRAG"], x["PAYLOAD"]),
+                        mac.format_mac(data_pkt["mac_add2"]), mac.format_mac(my_mac), data_pkt["N_SEQ"], data_pkt["N_FRAG"], data_pkt["PAYLOAD"]),
                               node, print_data)
 
                     fragmenting = 1
                     frag_count += 1
                     DATA_ok = 1
-                    data_temp_reass = data_temp_reass + x["PAYLOAD"]
+                    data_temp_reass = data_temp_reass + data_pkt["PAYLOAD"]
             else:
                 DATA_ok = 0
                 state = "WAITING_FOR_DATA"  # Not a DATA packet

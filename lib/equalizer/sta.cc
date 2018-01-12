@@ -40,6 +40,7 @@ void sta::equalize(gr_complex *in, int n, gr_complex *symbols, uint8_t *bits, bo
 		}
 
 		d_snr = 10 * std::log10(signal / noise / 2);
+		d_noise_floor = 10 * std::log10(noise / 52);    // noise floor in each (DATA & Pilot) subcarriers
 
 	} else {
 
@@ -92,4 +93,8 @@ void sta::equalize(gr_complex *in, int n, gr_complex *symbols, uint8_t *bits, bo
 double
 sta::get_snr() {
 	return d_snr;
+}
+
+double sta::get_noise_floor() {
+    return d_noise_floor;
 }

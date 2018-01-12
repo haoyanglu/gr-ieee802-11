@@ -40,6 +40,7 @@ void ls::equalize(gr_complex *in, int n, gr_complex *symbols, uint8_t *bits, boo
 		}
 
 		d_snr = 10 * std::log10(signal / noise / 2);
+		d_noise_floor = 10 * std::log10(noise / 52);    // noise floor in each (DATA & Pilot) subcarriers
 
 	} else {
 
@@ -58,4 +59,8 @@ void ls::equalize(gr_complex *in, int n, gr_complex *symbols, uint8_t *bits, boo
 
 double ls::get_snr() {
 	return d_snr;
+}
+
+double ls::get_noise_floor() {
+    return d_noise_floor;
 }

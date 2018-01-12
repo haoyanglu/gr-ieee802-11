@@ -30,10 +30,11 @@ public:
 	virtual void equalize(gr_complex *in, int n, gr_complex *symbols, uint8_t *bits, boost::shared_ptr<gr::digital::constellation> mod);
 private:
 	double get_snr();
-
+    double get_noise_floor();
 
 	gr_complex d_H[64];
 	double d_snr;
+    double d_noise_floor;
 	const double alpha = 0.5;
 };
 

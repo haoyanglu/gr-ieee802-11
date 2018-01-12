@@ -75,3 +75,7 @@ double
 comb::get_snr() {
 	return 42;
 }
+
+double comb::get_noise_floor() {
+    return 0;
+}
