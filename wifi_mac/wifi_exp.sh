@@ -21,6 +21,7 @@ PHYRXport=(8513 8514)   # Socket No. of PHY RX
 localNodeId=(1 2)       # Local node
 destNodeId=(2 1)        # Destination node
 usrp_addr=("" "192.168.10.2")
+tx_gain=(0.01 0.75)
 
 # Buffer parameters
 MACport=(8001 8002)     # Socket No. of upper layer (buffer)
@@ -28,7 +29,7 @@ n_pkt=(100 100)         # No. of pkt generated
 t_interval=(0.02 0.02)  # Interval of pkt generation (s)
 
 # MAC parameters
-rate_control=(aarf none)    # rate adaptation approach
+rate_control=(none none)    # rate adaptation approach
                             # "none"
                             # "aarf"
                             # "minstrel"
@@ -36,7 +37,7 @@ encoding=(0 0)      # initial data rate
 beta=15000          # scaling factor of timing
                     # 1 USRP: 1000
                     # 2 USRPs: 15000
-retx_max=(4 0)      # Maximum No. of retries
+retx_max=(0 0)      # Maximum No. of retries
 
 # Sanity check
 if [ "${rate_control[0]}" != none ] && [ "${rate_control[0]}" != "aarf" ] && [ "${rate_control[0]}" != "minstrel" ]
@@ -99,6 +100,47 @@ echo "Entering $PWD"
 prefix="python "
 
 ##########################################
+# Configure the second USRP (optional)
+##########################################
+
+# Assemble commands
+if [ $n_usrp == 2 ]; then
+    usrp_no=1
+    buf_cmd="ul_buffer.py --MACport=${MACport[$usrp_no]}"
+    tra_cmd="ul_traffic.py --MACport=${MACport[$usrp_no]} -n ${n_pkt[$usrp_no]} -t ${t_interval[$usrp_no]}"
+    phy_cmd="phy_wifi.py -n ${localNodeId[$usrp_no]} --PHYport=${PHYport[$usrp_no]} --PHYRXport=${PHYRXport[$usrp_no]} -G ${tx_gain[$usrp_no]}"
+    if [ "${usrp_addr[$usrp_no]}" != "" ]; then
+        phy_cmd="$phy_cmd -a ${usrp_addr[$usrp_no]}"
+    fi
+    mac_cmd="mac_wifi.py --MACport=${MACport[$usrp_no]} --PHYport=${PHYport[$usrp_no]} --encoding=${encoding[$usrp_no]}\
+     --beta=$beta -r ${retx_max[$usrp_no]} -R ${rate_control[$usrp_no]} --dest_node=${destNodeId[$usrp_no]}"
+
+    echo "======= USRP Node ${localNodeId[$usrp_no]} ========"
+    echo "CMD 1: $buf_cmd"
+    echo "CMD 2: $tra_cmd"
+    echo "CMD 3: $phy_cmd"
+    echo "CMD 4: $mac_cmd"
+    echo "============================"
+
+    # Run commands
+    echo "[${localNodeId[$usrp_no]}] Start PHY"
+    ($prefix$phy_cmd) &
+    sleep 5
+
+    echo "[${localNodeId[$usrp_no]}] Start buffer"
+    ($prefix$buf_cmd) &
+    sleep 5
+
+    # echo "[${localNodeId[$usrp_no]}] Generate traffic"
+    # $prefix$tra_cmd
+    # echo "[${localNodeId[$usrp_no]}] Traffic generated"
+    # sleep 5
+
+    echo "[${localNodeId[$usrp_no]}] Start MAC"
+    ($prefix$mac_cmd) &
+fi
+
+##########################################
 # Configure the first USRP
 ##########################################
 
@@ -106,7 +148,7 @@ prefix="python "
 usrp_no=0
 buf_cmd="ul_buffer.py --MACport=${MACport[$usrp_no]}"
 tra_cmd="ul_traffic.py --MACport=${MACport[$usrp_no]} -n ${n_pkt[$usrp_no]} -t ${t_interval[$usrp_no]}"
-phy_cmd="phy_wifi.py -n ${localNodeId[$usrp_no]} --PHYport=${PHYport[$usrp_no]} --PHYRXport=${PHYRXport[$usrp_no]}"
+phy_cmd="phy_wifi.py -n ${localNodeId[$usrp_no]} --PHYport=${PHYport[$usrp_no]} --PHYRXport=${PHYRXport[$usrp_no]} -G ${tx_gain[$usrp_no]}"
 if [ "${usrp_addr[$usrp_no]}" != "" ]; then
     phy_cmd="$phy_cmd -a ${usrp_addr[$usrp_no]}"
 fi
@@ -135,47 +177,6 @@ sleep 5
 
 echo "[${localNodeId[$usrp_no]}] Start MAC"
 ($prefix$mac_cmd) &
-
-##########################################
-# Configure the second USRP (optional)
-##########################################
-
-# Assemble commands
-if [ $n_usrp == 2 ]; then
-    usrp_no=1
-    buf_cmd="ul_buffer.py --MACport=${MACport[$usrp_no]}"
-    tra_cmd="ul_traffic.py --MACport=${MACport[$usrp_no]} -n ${n_pkt[$usrp_no]} -t ${t_interval[$usrp_no]}"
-    phy_cmd="phy_wifi.py -n ${localNodeId[$usrp_no]} --PHYport=${PHYport[$usrp_no]} --PHYRXport=${PHYRXport[$usrp_no]}"
-    if [ "${usrp_addr[$usrp_no]}" != "" ]; then
-        phy_cmd="$phy_cmd -a ${usrp_addr[$usrp_no]}"
-    fi
-    mac_cmd="mac_wifi.py --MACport=${MACport[$usrp_no]} --PHYport=${PHYport[$usrp_no]} --encoding=${encoding[$usrp_no]}\
-     --beta=$beta -r ${retx_max[$usrp_no]} -R ${rate_control[$usrp_no]} --dest_node=${destNodeId[$usrp_no]}"
-
-    echo "======= USRP Node ${localNodeId[$usrp_no]} ========"
-    echo "CMD 1: $buf_cmd"
-    echo "CMD 2: $tra_cmd"
-    echo "CMD 3: $phy_cmd"
-    echo "CMD 4: $mac_cmd"
-    echo "============================"
-
-    # Run commands
-    echo "[${localNodeId[$usrp_no]}] Start PHY"
-    ($prefix$phy_cmd) &
-    sleep 5
-
-    echo "[${localNodeId[$usrp_no]}] Start buffer"
-    ($prefix$buf_cmd) &
-    sleep 5
-
-    echo "[${localNodeId[$usrp_no]}] Generate traffic"
-    $prefix$tra_cmd
-    echo "[${localNodeId[$usrp_no]}] Traffic generated"
-    sleep 5
-
-    echo "[${localNodeId[$usrp_no]}] Start MAC"
-    ($prefix$mac_cmd) &
-fi
 
 cd --
 
