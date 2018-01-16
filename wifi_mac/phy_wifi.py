@@ -94,7 +94,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         self.rx_gain = rx_gain = options.rx_gain
         self.lo_offset = lo_offset = options.lo_offset
         self.freq = freq = options.freq
-        self.encoding = encoding = options.encoding
+        self.encoding = encoding = 0    # For GUI display use. The actual rate of each packet is specified by MAC
         self.chan_est = chan_est = options.chan_est
         self.usrp_ip = options.usrp_ip
         self.node = options.node
@@ -474,7 +474,9 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         :return: none
         """
         port = pmt.intern("in")  # message input port name of block mapper()
-        self.set_encoding(encoding)  # select data rate
+
+        if self.encoding != encoding:
+            self.set_encoding(encoding)  # select data rate
 
         # print "TX PKT: ", ','.join(x.encode('hex') for x in pkt)
 
@@ -801,16 +803,6 @@ def main(top_block_cls=wifi_transceiver, options=None):
                         1 -> LMS, \
                         2 -> COMB, \
                         3 -> STA")
-    parser.add_option("", "--encoding", type="int", default=0,
-                      help="set OFDM data rate, [default=%default]\
-                        0 -> 6 (3) Mbit/s (BPSK r=0.5), \
-                        1 -> 9 (4.5) Mbit/s (BPSK r=0.75), \
-                        2 -> 12 (6) Mbit/s (QPSK r=0.5), \
-                        3 -> 18 (9) Mbit/s (QPSK r=0.75), \
-                        4 -> 24 (12) Mbit/s (QAM16 r=0.5), \
-                        5 -> 36 (18) Mbit/s (QAM16 r=0.75), \
-                        6 -> 48 (24) Mbit/s (QAM64 r=0.66), \
-                        7 -> 54 (27) Mbit/s (QAM64 r=0.75)")
     parser.add_option("-G", "--tx_gain", type="eng_float", default=23.5,
                       help="set USRP2 Tx GAIN in [dB] [default=%default]")
     parser.add_option("-n", "--node", type="int", default=1, help="USRP2 node [default=%default]")
