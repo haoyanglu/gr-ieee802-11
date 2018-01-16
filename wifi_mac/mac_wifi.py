@@ -75,7 +75,7 @@ def main():
                       help="Socket port for MAC <-> PHY communication [default=%default]")
     parser.add_option("", "--MACport", type="intx", default=8001,
                       help="Socket port of upper layer (ul_buffer), [default=%default]")
-    parser.add_option("", "--encoding", type="int", default="2",
+    parser.add_option("", "--encoding", type="int", default=2,
                       help="OFDM data rate index    [default=%default]\
                         0 -> 6 (3) Mbit/s (BPSK r=0.5), \
                         1 -> 9 (4.5) Mbit/s (BPSK r=0.75), \
@@ -319,8 +319,7 @@ def main():
 
         elif state == "WAIT_FOR_DIFS":
             # This state performs the channel sensing process and decides whether the channel is BUSY or IDLE
-            t_inicial = time.time()
-            t_final = t_inicial + DIFS
+            t_final = time.time() + DIFS
             n_sensing = 0
 
             while n_sensing < 2:
@@ -463,8 +462,8 @@ def main():
                     tx_type = "Resend"
 
                 print_msg("| TRANSMITTING_UNICAST | %s DATA | %s |" % (tx_type, state), node, print_state_trans)
-                print_msg("[T]-[DATA]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[%s]%s" % (
-                    mac.format_mac(dest_mac), mac.format_mac(my_mac), N_SEQ, PAYLOAD,
+                print_msg("[T]-[DATA]-[rate:%d]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[%s]%s" % (
+                    encoding, mac.format_mac(dest_mac), mac.format_mac(my_mac), N_SEQ, PAYLOAD,
                     "-[RETX]" if tx_type == "Resend" else ""), node, print_data)
 
                 N_SEQ = mac.next_seq_num(N_SEQ)
@@ -553,8 +552,8 @@ def main():
 
                 state = "WAIT_ACK_FRAGMENTED"
                 print_msg("| TRANSMITTING_FRAGMENTED_PACKET | Send DATA FRAG | %s |" % state, node, print_state_trans)
-                print_msg("[T]-[FRAGMENTED DATA]-[DA:%s]-[SA:%s]-[MF:1]-[Seq#:%i]-[Frag#:%i]-[""%s""]" % (
-                    mac.format_mac(dest_mac), mac.format_mac(my_mac), N_SEQ, N_FRAG, payload_tmp), node, print_data)
+                print_msg("[T]-[FRAGMENTED DATA]-[rate:%d]-[DA:%s]-[SA:%s]-[MF:1]-[Seq#:%i]-[Frag#:%i]-[""%s""]" % (
+                    encoding, mac.format_mac(dest_mac), mac.format_mac(my_mac), N_SEQ, N_FRAG, payload_tmp), node, print_data)
                 mac.send_wo_response(pkt, phy_port)
                 fragments.pop(0)  # FIXME Retransmission for Fragmented packets is required
                 fin_wait_ack_fragmented = False
@@ -569,8 +568,8 @@ def main():
                 state = "WAIT_ACK_FRAGMENTED"
                 print_msg("| TRANSMITTING_FRAGMENTED_PACKET | Send DATA FRAG (last fragment) | %s |" % state,
                           node, print_state_trans)
-                print_msg("[T]-[DATA]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[%s]" % (
-                    mac.format_mac(dest_mac), mac.format_mac(my_mac), N_SEQ, payload_tmp), node, print_data)
+                print_msg("[T]-[DATA]-[rate:%d]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[%s]" % (
+                    encoding, mac.format_mac(dest_mac), mac.format_mac(my_mac), N_SEQ, payload_tmp), node, print_data)
                 packet = mac.generate_pkt("DATA", t_sym, encoding, values)
                 pkt = mac.create_packet("PKT", packet)
                 mac.send_wo_response(pkt, phy_port)
@@ -816,7 +815,7 @@ def main():
                       "timestamp": time.time()}  # ack_addr copied from the previous Data packet
             state = "WAITING_FOR_DATA"
             print_msg("| TX_ACK_FG | ACK sent | %s |" % state, node, print_state_trans)
-            print_msg("[T]-[ACK]-[DA:%s]" % mac.format_mac(ack_addr), node, print_data)
+            print_msg("[T]-[ACK]-[rate:%d]-[DA:%s]" % (encoding_ctrl_frame, mac.format_mac(ack_addr)), node, print_data)
             ACK = mac.generate_pkt("ACK", t_sym, encoding_ctrl_frame, values)
             packet_ACK = mac.create_packet("PKT", ACK)
             mac.send_wo_response(packet_ACK, phy_port)
@@ -826,7 +825,7 @@ def main():
                       "timestamp": time.time()}  # ack_addr copied from the previous Data packet
             state = "IDLE"
             print_msg("| TRANSMITTING_ACK | ACK sent | %s |" % state, node, print_state_trans)
-            print_msg("[T]-[ACK]-[DA:%s]" % mac.format_mac(ack_addr), node, print_data)
+            print_msg("[T]-[ACK]-[rate:%d]-[DA:%s]" % (encoding_ctrl_frame, mac.format_mac(ack_addr)), node, print_data)
             ACK = mac.generate_pkt("ACK", t_sym, encoding_ctrl_frame, values)
             packet_ACK = mac.create_packet("PKT", ACK)
             mac.send_wo_response(packet_ACK, phy_port)
