@@ -164,7 +164,7 @@ def main():
     air_delay_max = 200 / 299792458  # 20 meters / speed of light
 
     # Consider increase processing_delay if the generated ack from RX can't be captured within the timeout window
-    processing_delay = 0.2  # data processing delay
+    processing_delay = 0.3  # data processing delay
     t_ack_timeout = (T_data_max + T_ack) * 1e-6 + SIFS + 2 * air_delay_max + processing_delay
 
     print_msg("ACK_time (s):%f, T_ack (s):%f" % (ACK_time, T_ack * 1e-6), node)
@@ -275,11 +275,11 @@ def main():
                     state = "TRANSMITTING_ACK"
                     ack_addr = data_pkt["mac_add2"]  # address to respond
                     print_msg(
-                        "[R]-[DATA]-[rate:%d]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[SNR:%f dB]-[NF:%f dB]-[FreqOff:%f]-[%s]" % (
+                        "[R]-[DATA]-[rate:%d]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[SNR:%f dB]-[NF:%f dB]-[Ps:%f dB]-[FreqOff:%f]-[%s]" % (
                             data_pkt['encoding'], mac.format_mac(data_pkt["mac_add1"]),
                             mac.format_mac(data_pkt["mac_add2"]), data_pkt["N_SEQ"],
-                            data_pkt["snr"], data_pkt["noise_floor"], data_pkt["freqofs"], data_pkt["PAYLOAD"]), node,
-                        print_data)
+                            data_pkt["snr"], data_pkt["noise_floor"], data_pkt["snr"] + data_pkt["noise_floor"],
+                            data_pkt["freqofs"], data_pkt["PAYLOAD"]), node, print_data)
                     print_msg("| IDLE | DATA received | %s |" % state, node, print_state_trans)
                     mac.send_ul_buff_packet(mac_port, data_pkt["packet"][24:])
                 else:  # Check upper layer buffer for data to send
@@ -463,7 +463,7 @@ def main():
                     tx_type = "Resend"
 
                 print_msg("| TRANSMITTING_UNICAST | %s DATA | %s |" % (tx_type, state), node, print_state_trans)
-                print_msg("[T]-[DATA]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[""%s""]%s" % (
+                print_msg("[T]-[DATA]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[%s]%s" % (
                     mac.format_mac(dest_mac), mac.format_mac(my_mac), N_SEQ, PAYLOAD,
                     "-[RETX]" if tx_type == "Resend" else ""), node, print_data)
 
@@ -569,7 +569,7 @@ def main():
                 state = "WAIT_ACK_FRAGMENTED"
                 print_msg("| TRANSMITTING_FRAGMENTED_PACKET | Send DATA FRAG (last fragment) | %s |" % state,
                           node, print_state_trans)
-                print_msg("[T]-[DATA]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[""%s""]" % (
+                print_msg("[T]-[DATA]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[%s]" % (
                     mac.format_mac(dest_mac), mac.format_mac(my_mac), N_SEQ, payload_tmp), node, print_data)
                 packet = mac.generate_pkt("DATA", t_sym, encoding, values)
                 pkt = mac.create_packet("PKT", packet)
@@ -621,9 +621,9 @@ def main():
             ta = time.time()
             no_packet, ack_pkt = mac.read_phy_response(phy_port, "ACK")
             if no_packet == "YES":
-                print_msg("[R]-[ACK]-[rate:%d]-[DA:%s]-[IFM:1]-[SNR:%f dB]-[NF:%f dB]-[FreqOff:%f]" % (
-                    ack_pkt['encoding'], mac.format_mac(ack_pkt["RX_add"]), ack_pkt['snr'], ack_pkt['noise_floor'], ack_pkt['freqofs']), node,
-                          print_data)
+                print_msg("[R]-[ACK]-[rate:%d]-[DA:%s]-[IFM:1]-[SNR:%f dB]-[NF:%f dB]-[Ps:%f dB]-[FreqOff:%f]" % (
+                    ack_pkt['encoding'], mac.format_mac(ack_pkt["RX_add"]), ack_pkt['snr'], ack_pkt['noise_floor'],
+                    ack_pkt['snr'] + ack_pkt['noise_floor'], ack_pkt['freqofs']), node, print_data)
                 '''
                 #============================================================
                 # /TEST/ UNCOMMENT TO CHECK RTS/CTS FUNCTIONALITY
@@ -746,9 +746,9 @@ def main():
                     if fragmenting == 0:  # Not a fragmented packet
                         state = "TRANSMITTING_ACK"
                         print_msg("| WAITING_FOR_DATA | DATA received | %s |" % state, node, print_state_trans)
-                        print_msg("[R]-[DATA]-[DA:%s]-[SA:%s]-[MF:0]-[IFM:1]-[""%s""]" % (
-                            mac.format_mac(data_pkt["mac_add1"]), mac.format_mac(data_pkt["mac_add2"]), data_pkt["PAYLOAD"]), node,
-                                  print_data)
+                        print_msg("[R]-[DATA]-[DA:%s]-[SA:%s]-[MF:0]-[IFM:1]-[%s]" % (
+                            mac.format_mac(data_pkt["mac_add1"]), mac.format_mac(data_pkt["mac_add2"]),
+                            data_pkt["PAYLOAD"]), node, print_data)
 
                         WF_DATA_first_time = 1
                         DATA_ok = 1
@@ -759,8 +759,8 @@ def main():
                         frag_count += 1
                         print_msg(
                             "[R]-[FRAGMENTED DATA]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[Frag#:%i]-[IFM:1]-[""%s""]" % (
-                                mac.format_mac(data_pkt["mac_add2"]), mac.format_mac(my_mac), data_pkt["N_SEQ"], data_pkt["N_FRAG"],
-                                data_pkt["PAYLOAD"]), node, print_data)
+                                mac.format_mac(data_pkt["mac_add2"]), mac.format_mac(my_mac), data_pkt["N_SEQ"],
+                                data_pkt["N_FRAG"], data_pkt["PAYLOAD"]), node, print_data)
                         test_seq = data_pkt["N_FRAG"] + 1 - frag_count
                         if test_seq == 0:
                             dato_leido = data_temp_reass + data_pkt["PAYLOAD"]
@@ -786,8 +786,8 @@ def main():
                     print_msg("| WAITING_FOR_DATA | DATA_FRAG received  (MF = 1)| TRANSMITTING_ACK |",
                               node, print_state_trans)
                     print_msg("[R]-[FRAGMENTED DATA]-[DA:%s]-[SA:%s]-[MF:1]-[Seq#:%i]-[Frag#:%i]-[IFM:1]-[""%s""]" % (
-                        mac.format_mac(data_pkt["mac_add2"]), mac.format_mac(my_mac), data_pkt["N_SEQ"], data_pkt["N_FRAG"], data_pkt["PAYLOAD"]),
-                              node, print_data)
+                        mac.format_mac(data_pkt["mac_add2"]), mac.format_mac(my_mac), data_pkt["N_SEQ"],
+                        data_pkt["N_FRAG"], data_pkt["PAYLOAD"]), node, print_data)
 
                     fragmenting = 1
                     frag_count += 1
