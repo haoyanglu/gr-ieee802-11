@@ -244,15 +244,11 @@ def sense_channel(port, thre=-35):
     :param port: socket port
     :param thre: voltage threshold. The channel is considered BUSY if the measured voltage is larger than the threshold
     :return: 1) channel status ("OCCUPIED" or "FREE")
-             2) carrier sensing processing time
-             3) measured voltage
+             2) measured voltage
     """
-    time1 = time.time()
     sensed = _send_for_response(create_packet("CCA", ""), port)
-    maximo = sensed["DATA"]
-    maximo_dBw = 10 * math.log10(maximo)  # Save the data in dBw
-    time2 = time.time()
-    return "OCCUPIED" if maximo_dBw > thre else "FREE", time2 - time1, maximo_dBw
+    maximo_dBw = 10 * math.log10(sensed["DATA"])  # Save the data in dBw
+    return "OCCUPIED" if maximo_dBw > thre else "FREE", maximo_dBw
 
 
 def update_nav(timetick, nav, timeslot):

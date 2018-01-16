@@ -324,7 +324,7 @@ def main():
 
             while n_sensing < 2:
                 t_testB = time.time()
-                channel_status, t, sig_power = mac.sense_channel(phy_port)
+                channel_status, sig_power = mac.sense_channel(phy_port)
                 print_msg("Channel is %s (%5.2f dBw)......" % (channel_status, sig_power), node, print_chan_sense)
                 t_testC = time.time()
                 assert (tslot - (t_testC - t_testB) >= 0), timing_error
@@ -360,7 +360,7 @@ def main():
                 continue
 
             tx = time.time()
-            channel_status, t, sig_power = mac.sense_channel(phy_port)
+            channel_status, sig_power = mac.sense_channel(phy_port)
             print_msg("Channel is %s (%5.2f dBw)......" % (channel_status, sig_power), node, print_chan_sense)
             BACKOFF = BACKOFF - 1
             if channel_status == "FREE":  # Channel idle
