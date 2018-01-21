@@ -365,7 +365,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
 
         self._qtgui_const_sink_x_0_win = sip.wrapinstance(self.qtgui_const_sink_x_0.pyqwidget(), Qt.QWidget)
         self.top_layout.addWidget(self._qtgui_const_sink_x_0_win)
-        self.ieee802_11_parse_mac_0 = ieee802_11.parse_mac(False, False)
+        # self.ieee802_11_parse_mac_0 = ieee802_11.parse_mac(False, False)
 
         if wireshark:  # save the captured packets in pcap for record in Wireshark
             self.foo_wireshark_connector_0 = foo.wireshark_connector(127, False)
@@ -386,7 +386,7 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         # Connections
         ##################################################
         self.msg_connect((self.wifi_phy_hier_0, 'carrier'), (self.blocks_pdu_to_tagged_stream_0_0, 'pdus'))
-        self.msg_connect((self.wifi_phy_hier_0, 'mac_out'), (self.ieee802_11_parse_mac_0, 'in'))
+        # self.msg_connect((self.wifi_phy_hier_0, 'mac_out'), (self.ieee802_11_parse_mac_0, 'in'))
         self.msg_connect((self.wifi_phy_hier_0, 'mac_out'), (self.zeromq_push_msg_sink_0, 'in'))
         self.connect((self.blocks_multiply_const_vxx_0, 0), (self.foo_packet_pad2_0, 0))
         self.connect((self.blocks_pdu_to_tagged_stream_0_0, 0), (self.qtgui_const_sink_x_0, 0))
@@ -532,7 +532,6 @@ class rx_client(threading.Thread):
                 pkt = "".join(chr(x) for x in blob_data)
             except:
                 continue
-
             arrived_packet = mac.parse_mac(pkt, pkt_info)
 
             if "DATA" == arrived_packet["HEADER"] or "DATA_FRAG" == arrived_packet["HEADER"]:  # DATA
