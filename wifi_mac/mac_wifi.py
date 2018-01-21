@@ -275,7 +275,7 @@ def main():
                     state = "TRANSMITTING_ACK"
                     ack_addr = data_pkt["mac_add2"]  # address to respond
                     print_msg(
-                        "[R]-[DATA]-[rate:%d]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[SNR:%f dB]-[NF:%f dB]-[Ps:%f dB]-[FreqOff:%f]-[%s]" % (
+                        "[R]-[DATA]-[rate:%d]-[DA:%s]-[SA:%s]-[MF:0]-[Seq#:%i]-[SNR:%4.2f dB]-[NF:%4.2f dB]-[Ps:%4.2f dB]-[FreqOff:%f]-[%s]" % (
                             data_pkt['encoding'], mac.format_mac(data_pkt["mac_add1"]),
                             mac.format_mac(data_pkt["mac_add2"]), data_pkt["N_SEQ"],
                             data_pkt["snr"], data_pkt["noise_floor"], data_pkt["snr"] + data_pkt["noise_floor"],
@@ -298,7 +298,7 @@ def main():
                             tiempo = cts_pkt["tx_time"] / 1.0e3
                             state = "IDLE"
                             print_msg("[R]-[CTS]-[DA:%s]-[duration:%f]-[IFM:0]" % (
-                                mac.format_mac(cts_pkt["RX_add"]), cts_pkt["txtime"]), node, print_data)
+                                mac.format_mac(cts_pkt["RX_add"]), cts_pkt["tx_time"]), node, print_data)
                             print_msg("| IDLE | CTS captured (update NAV) | %s |" % state, node, print_state_trans)
                             NAV = mac.update_nav(time.time(), tiempo, tslot)
 
@@ -620,7 +620,7 @@ def main():
             ta = time.time()
             no_packet, ack_pkt = mac.read_phy_response(phy_port, "ACK")
             if no_packet == "YES":
-                print_msg("[R]-[ACK]-[rate:%d]-[DA:%s]-[IFM:1]-[SNR:%f dB]-[NF:%f dB]-[Ps:%f dB]-[FreqOff:%f]" % (
+                print_msg("[R]-[ACK]-[rate:%d]-[DA:%s]-[IFM:1]-[SNR:%4.2f dB]-[NF:%4.2f dB]-[Ps:%4.2f dB]-[FreqOff:%f]" % (
                     ack_pkt['encoding'], mac.format_mac(ack_pkt["RX_add"]), ack_pkt['snr'], ack_pkt['noise_floor'],
                     ack_pkt['snr'] + ack_pkt['noise_floor'], ack_pkt['freqofs']), node, print_data)
                 '''
