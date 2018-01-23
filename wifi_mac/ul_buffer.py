@@ -82,17 +82,17 @@ class Client(Thread):
             self.cs.elements.reverse()
             if self.cs.read(0) == "[beacon packet]":
                 x = plcp.create_packet("BEACON", "")
-                print "Buffer has BEACON to send....."
+                # print "Buffer has BEACON to send....."
             else:
                 x = plcp.create_packet("YES", self.cs.read(0))
-                print "Buffer has a DATA to send......"
+                # print "Buffer has a DATA to send......"
             self.cs.elements.reverse()
             plcp.send_to_mac(self.socket, x)
 
             return
 
         if "remove" == arrived_packet["HEADER"]:  # Remove a packet from the buffer
-            print "Upper buffer is set to remove a packet......"
+            # print "Upper buffer is set to remove a packet......"
             self.cs.elements.pop()
 
         elif "copy" == arrived_packet["HEADER"]:  # A packet arrives from MAC layer
@@ -102,17 +102,17 @@ class Client(Thread):
             self.cs.push(arrived_packet["DATA"])
 
         elif "BEACON" == arrived_packet["HEADER"]:  # Beacon request arrival
-            print "Buffer receives a BEACON from upper layer......"
+            # print "Buffer receives a BEACON from upper layer......"
             self.cs.push(arrived_packet["DATA"])
 
-        if self.print_buffer:  # Print the content of the buffer
-            print "== Statistics %s ==" % time.time()
-            print "========== TX Buffer ============"
-            print self.cs.elements
-            print "========== RX Buffer ============"
-            print self.cs2.elements
-        else:  # Only print the size of the buffer
-            print "TX [%d], RX [%d]" % (self.cs.length(), self.cs2.length())
+        # if self.print_buffer:  # Print the content of the buffer
+        #     print "== Statistics %s ==" % time.time()
+        #     print "========== TX Buffer ============"
+        #     print self.cs.elements
+        #     print "========== RX Buffer ============"
+        #     print self.cs2.elements
+        # else:  # Only print the size of the buffer
+        #     print "TX [%d], RX [%d]" % (self.cs.length(), self.cs2.length())
 
 
 def main():
