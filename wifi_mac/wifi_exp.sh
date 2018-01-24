@@ -5,6 +5,9 @@
 #   ./wifi_exp.sh 1 -- same as above
 #   ./wifi_exp.sh 2 -- Configure 2 USRPs
 
+# kill living processes
+ps -ef | grep -e ul_buffer.py -e phy_wifi.py | grep -v grep | awk '{print $2}' | xargs kill
+
 set -e  # terminate installation upon error occurs
 
 n_usrp=1
