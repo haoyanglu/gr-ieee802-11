@@ -21,11 +21,12 @@ PHYRXport=(8513 8514)   # Socket No. of PHY RX
 localNodeId=(1 2)       # Local node
 destNodeId=(2 1)        # Destination node
 usrp_addr=("" "192.168.10.2")
-tx_gain=(0.01 0.75)
+tx_gain=(15 23.5)
+rx_gain=(5.7 5.7)
 
 # Buffer parameters
 MACport=(8001 8002)     # Socket No. of upper layer (buffer)
-n_pkt=(100 100)         # No. of pkt generated
+n_pkt=(100 0)         # No. of pkt generated
 t_interval=(0.02 0.02)  # Interval of pkt generation (s)
 
 # MAC parameters
@@ -108,7 +109,8 @@ if [ $n_usrp == 2 ]; then
     usrp_no=1
     buf_cmd="ul_buffer.py --MACport=${MACport[$usrp_no]}"
     tra_cmd="ul_traffic.py --MACport=${MACport[$usrp_no]} -n ${n_pkt[$usrp_no]} -t ${t_interval[$usrp_no]}"
-    phy_cmd="phy_wifi.py -n ${localNodeId[$usrp_no]} --PHYport=${PHYport[$usrp_no]} --PHYRXport=${PHYRXport[$usrp_no]} -G ${tx_gain[$usrp_no]}"
+    phy_cmd="phy_wifi.py -n ${localNodeId[$usrp_no]} --PHYport=${PHYport[$usrp_no]} --PHYRXport=${PHYRXport[$usrp_no]}\
+    -G ${tx_gain[$usrp_no]} -g ${rx_gain[$usrp_no]}"
     if [ "${usrp_addr[$usrp_no]}" != "" ]; then
         phy_cmd="$phy_cmd -a ${usrp_addr[$usrp_no]}"
     fi
@@ -148,7 +150,8 @@ fi
 usrp_no=0
 buf_cmd="ul_buffer.py --MACport=${MACport[$usrp_no]}"
 tra_cmd="ul_traffic.py --MACport=${MACport[$usrp_no]} -n ${n_pkt[$usrp_no]} -t ${t_interval[$usrp_no]}"
-phy_cmd="phy_wifi.py -n ${localNodeId[$usrp_no]} --PHYport=${PHYport[$usrp_no]} --PHYRXport=${PHYRXport[$usrp_no]} -G ${tx_gain[$usrp_no]}"
+phy_cmd="phy_wifi.py -n ${localNodeId[$usrp_no]} --PHYport=${PHYport[$usrp_no]} --PHYRXport=${PHYRXport[$usrp_no]}\
+    -G ${tx_gain[$usrp_no]} -g ${rx_gain[$usrp_no]}"
 if [ "${usrp_addr[$usrp_no]}" != "" ]; then
     phy_cmd="$phy_cmd -a ${usrp_addr[$usrp_no]}"
 fi
