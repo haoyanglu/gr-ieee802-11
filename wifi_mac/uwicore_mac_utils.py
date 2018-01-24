@@ -481,7 +481,7 @@ def _send_to_port(data, s):
     s.send(pkt)
 
 
-def _recv_from_port(s, bufsize=1024):  # TODO: consider to increase the time if the packet is large
+def _recv_from_port(s, bufsize=4096):  # Increase the bufsize for large packet
     """
     Receive data from socket
     :param s: socket object
