@@ -24,12 +24,12 @@ PHYRXport=(8513 8514)   # Socket No. of PHY RX
 localNodeId=(1 2)       # Local node
 destNodeId=(2 1)        # Destination node
 usrp_addr=("" "192.168.10.2")
-tx_gain=(15 23.5)
-rx_gain=(5.7 5.7)
+tx_gain=(15 15)
+rx_gain=(23 15)
 
 # Buffer parameters
 MACport=(8001 8002)     # Socket No. of upper layer (buffer)
-n_pkt=(100 0)         # No. of pkt generated
+n_pkt=(50 0)         # No. of pkt generated
 t_interval=(0.02 0.02)  # Interval of pkt generation (s)
 
 # MAC parameters
@@ -38,7 +38,7 @@ rate_control=(none none)    # rate adaptation approach
                             # "aarf"
                             # "minstrel"
 encoding=(0 0)      # initial data rate
-beta=15000          # scaling factor of timing
+beta=5000          # scaling factor of timing
                     # 1 USRP: 1000
                     # 2 USRPs: 15000
 retx_max=(0 0)      # Maximum No. of retries

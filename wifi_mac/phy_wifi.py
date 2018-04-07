@@ -268,11 +268,11 @@ class wifi_transceiver(gr.top_block, Qt.QWidget):
         print_msg('USRP RX gain range %s' % uhd_rx_gain_range, self.node)
 
         self._tx_gain_range = Range(uhd_tx_gain_range.start(), uhd_tx_gain_range.stop(), uhd_tx_gain_range.step(),
-                                    tx_gain, 200)
+                                    tx_gain, 1)
         self._tx_gain_win = RangeWidget(self._tx_gain_range, self.set_tx_gain, "tx_gain", "counter_slider", float)
         self.top_layout.addWidget(self._tx_gain_win)
         self._rx_gain_range = Range(uhd_rx_gain_range.start(), uhd_rx_gain_range.stop(), uhd_rx_gain_range.step(),
-                                    rx_gain, 200)
+                                    rx_gain, 1)
         self._rx_gain_win = RangeWidget(self._rx_gain_range, self.set_rx_gain, "rx_gain", "counter_slider", float)
         self.top_layout.addWidget(self._rx_gain_win)
 
