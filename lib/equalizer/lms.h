@@ -28,6 +28,7 @@ namespace equalizer {
 class lms: public base {
 public:
 	virtual void equalize(gr_complex *in, int n, gr_complex *symbols, uint8_t *bits, boost::shared_ptr<gr::digital::constellation> mod);
+	gr_complex* get_csi() { return d_H; }     // get the CSI
 private:
 	double get_snr();
     double get_noise_floor();

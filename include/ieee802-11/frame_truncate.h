@@ -13,33 +13,28 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
-#ifndef INCLUDED_IEEE802_11_EQUALIZER_LS_H
-#define INCLUDED_IEEE802_11_EQUALIZER_LS_H
 
-#include "base.h"
-#include <vector>
+#ifndef INCLUDED_IEEE802_11_FRAME_TRUNCATE_H
+#define INCLUDED_IEEE802_11_FRAME_TRUNCATE_H
+
+#include <ieee802-11/api.h>
+#include <gnuradio/tagged_stream_block.h>
 
 namespace gr {
-namespace ieee802_11 {
-namespace equalizer {
+    namespace ieee802_11 {
 
-class ls: public base {
-public:
-	virtual void equalize(gr_complex *in, int n, gr_complex *symbols, uint8_t *bits, boost::shared_ptr<gr::digital::constellation> mod);
-	virtual double get_snr();
-	double get_noise_floor();   // get the noise floor (in dB) per subcarrier
-	gr_complex* get_csi() { return d_H; }     // get the CSI
-private:
-	gr_complex d_H[64];
-	double d_snr;
-	double d_noise_floor;
-};
+        class IEEE802_11_API frame_truncate : virtual public tagged_stream_block
+        {
 
-} /* namespace channel_estimation */
-} /* namespace ieee802_11 */
-} /* namespace gr */
+            public:
+                typedef boost::shared_ptr<frame_truncate> sptr;
+                static sptr make(int n, const std::string &len_tag_key, bool debug);
+        };
 
-#endif /* INCLUDED_IEEE802_11_EQUALIZER_LS_H */
+    } // namespace ieee802_11
+} // namespace gr
 
+#endif /* INCLUDED_IEEE802_11_FRAME_TRUNCATE_H */

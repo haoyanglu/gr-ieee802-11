@@ -1,0 +1,60 @@
+<?xml version="1.0"?>
+<block>
+  <name>OFDM Carrier Allocator</name>
+  <key>ieee802_11_ofdm_carrier_allocator_cvc</key>
+  <category>[IEEE802.11]</category>
+  <import>import ieee802_11</import>
+  <make>ieee802_11.ofdm_carrier_allocator_cvc($fft_len, $occupied_carriers, $pilot_carriers, $pilot_symbols, $sync_words, $sidechan_mask, $len_tag_key)</make>
+  <callback>set_mask($sidechan_mask)</callback>
+  <param>
+    <name>Side channel mask</name>
+    <key>sidechan_mask</key>
+    <value>[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]</value>
+    <type>int_vector</type>
+  </param>
+  <param>
+    <name>FFT length</name>
+    <key>fft_len</key>
+    <value>fft_len</value>
+    <type>int</type>
+  </param>
+  <param>
+    <name>Occupied Carriers</name>
+    <key>occupied_carriers</key>
+    <type>raw</type>
+  </param>
+  <param>
+    <name>Pilot Carriers</name>
+    <key>pilot_carriers</key>
+    <value>()</value>
+    <type>raw</type>
+  </param>
+  <param>
+    <name>Pilot Symbols</name>
+    <key>pilot_symbols</key>
+    <value>()</value>
+    <type>raw</type>
+  </param>
+  <param>
+    <name>Sync Words</name>
+    <key>sync_words</key>
+    <value>()</value>
+    <type>raw</type>
+  </param>
+  <param>
+    <name>Length tag key</name>
+    <key>len_tag_key</key>
+    <value>"packet_len"</value>
+    <type>string</type>
+  </param>
+  <check>all([x == 0 or x == 1 for x in $sidechan_mask])</check>
+  <sink>
+    <name>in</name>
+    <type>complex</type>
+  </sink>
+  <source>
+    <name>out</name>
+    <type>complex</type>
+    <vlen>$fft_len</vlen>
+  </source>
+</block>

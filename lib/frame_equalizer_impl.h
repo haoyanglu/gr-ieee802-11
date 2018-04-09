@@ -80,6 +80,9 @@ private:
 	constellation_64qam::sptr d_64qam;
 
 	static const int interleaver_pattern[48];
+    gr_complex ltf[128];   // store ltf
+    gr_complex symbol_inputs_f[64*100];   // pointers to the symbol inputs (LTF not included)
+    gr_complex symbol_inputs_t[80*100];   // received signals in time domain (prefix included) (LTF not included) TODO: 100 -> MAX_SYM + 3 (utils.h)
 };
 
 } // namespace ieee802_11

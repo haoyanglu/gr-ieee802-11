@@ -134,12 +134,11 @@ if [ $n_usrp == 2 ]; then
 
     echo "[${localNodeId[$usrp_no]}] Start buffer"
     ($prefix$buf_cmd) &
-    sleep 5
+    sleep 2
 
-    # echo "[${localNodeId[$usrp_no]}] Generate traffic"
-    # $prefix$tra_cmd
-    # echo "[${localNodeId[$usrp_no]}] Traffic generated"
-    # sleep 5
+    echo "[${localNodeId[$usrp_no]}] Generate traffic"
+    $prefix$tra_cmd
+    echo "[${localNodeId[$usrp_no]}] Traffic generated"
 
     echo "[${localNodeId[$usrp_no]}] Start MAC"
     ($prefix$mac_cmd) &
@@ -174,12 +173,11 @@ sleep 5
 
 echo "[${localNodeId[$usrp_no]}] Start buffer"
 ($prefix$buf_cmd) &
-sleep 5
+sleep 2
 
 echo "[${localNodeId[$usrp_no]}] Generate traffic"
 $prefix$tra_cmd
 echo "[${localNodeId[$usrp_no]}] Traffic generated"
-sleep 5
 
 echo "[${localNodeId[$usrp_no]}] Start MAC"
 ($prefix$mac_cmd) &

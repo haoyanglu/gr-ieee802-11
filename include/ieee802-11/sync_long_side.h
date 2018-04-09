@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Bastian Bloessl <bloessl@ccs-labs.org>
+ * Copyright (C) 2013, 2016 Bastian Bloessl <bloessl@ccs-labs.org>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,31 +14,26 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef INCLUDED_IEEE802_11_SYNC_LONG_SIDE_H
+#define INCLUDED_IEEE802_11_SYNC_LONG_SIDE_H
 
-#ifndef INCLUDED_IEEE802_11_EQUALIZER_COMB_H
-#define INCLUDED_IEEE802_11_EQUALIZER_COMB_H
-
-#include "base.h"
+#include <ieee802-11/api.h>
+#include <gnuradio/block.h>
 
 namespace gr {
 namespace ieee802_11 {
-namespace equalizer {
 
-class comb: public base {
+class IEEE802_11_API sync_long_side : virtual public block
+{
 public:
-	virtual void equalize(gr_complex *in, int n, gr_complex *symbols, uint8_t *bits, boost::shared_ptr<gr::digital::constellation> mod);
-	double get_snr();
-    double get_noise_floor();
-	gr_complex* get_csi() { return d_H; }     // get the CSI
 
-private:
-	gr_complex d_H[64];
-	const double alpha = 0.2;
+	typedef boost::shared_ptr<sync_long_side> sptr;
+	static sptr make(unsigned int sync_length,
+			bool log = false, bool debug = false);
+
 };
 
-} /* namespace channel_estimation */
-} /* namespace ieee802_11 */
-} /* namespace gr */
+}  // namespace ieee802_11
+}  // namespace gr
 
-#endif /* INCLUDED_IEEE802_11_EQUALIZER_COMB_H */
-
+#endif /* INCLUDED_IEEE802_11_SYNC_LONG_SIDE_H */

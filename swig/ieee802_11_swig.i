@@ -35,6 +35,10 @@
 #include "ieee802-11/signal_field.h"
 #include "ieee802-11/sync_long.h"
 #include "ieee802-11/sync_short.h"
+#include "ieee802-11/ofdm_carrier_allocator_cvc.h"
+#include "ieee802-11/frame_reconstructor.h"
+#include "ieee802-11/frame_truncate.h"
+#include "ieee802-11/sync_long_side.h"
 %}
 
 %include "gnuradio/digital/packet_header_default.h"
@@ -57,6 +61,10 @@
 %include "ieee802-11/signal_field.h"
 %include "ieee802-11/sync_long.h"
 %include "ieee802-11/sync_short.h"
+%include "ieee802-11/ofdm_carrier_allocator_cvc.h"
+%include "ieee802-11/frame_reconstructor.h"
+%include "ieee802-11/frame_truncate.h"
+%include "ieee802-11/sync_long_side.h"
 
 GR_SWIG_BLOCK_MAGIC2(ieee802_11, chunks_to_symbols);
 GR_SWIG_BLOCK_MAGIC2(ieee802_11, decode_mac);
@@ -69,6 +77,10 @@ GR_SWIG_BLOCK_MAGIC2(ieee802_11, moving_average_ff);
 GR_SWIG_BLOCK_MAGIC2(ieee802_11, parse_mac);
 GR_SWIG_BLOCK_MAGIC2(ieee802_11, sync_long);
 GR_SWIG_BLOCK_MAGIC2(ieee802_11, sync_short);
+GR_SWIG_BLOCK_MAGIC2(ieee802_11, ofdm_carrier_allocator_cvc);
+GR_SWIG_BLOCK_MAGIC2(ieee802_11, frame_reconstructor);
+GR_SWIG_BLOCK_MAGIC2(ieee802_11, frame_truncate);
+GR_SWIG_BLOCK_MAGIC2(ieee802_11, sync_long_side);
 
 %template(signal_field_sptr) boost::shared_ptr<gr::ieee802_11::signal_field>;
 %pythoncode %{

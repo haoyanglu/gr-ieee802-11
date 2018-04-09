@@ -80,6 +80,10 @@ list(APPEND include_sources
     signal_field.h
     sync_long.h
     sync_short.h
+    ofdm_carrier_allocator_cvc.h
+    frame_reconstructor.h
+    frame_truncate.h
+    sync_long_side.h
 )
 
 install(

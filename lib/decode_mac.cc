@@ -32,7 +32,7 @@ public:
 decode_mac_impl(bool log, bool debug) :
 	block("decode_mac",
 			gr::io_signature::make(1, 1, 48),
-			gr::io_signature::make(0, 0, 0)),
+			gr::io_signature::make2(2, 2, 64 * sizeof(gr_complex), 80 * sizeof(gr_complex))),
 	d_log(log),
 	d_debug(debug),
 	d_snr(0),
@@ -44,6 +44,7 @@ decode_mac_impl(bool log, bool debug) :
 	d_frame_complete(true) {
 
 	message_port_register_out(pmt::mp("out"));
+	set_tag_propagation_policy(block::TPP_DONT);
 }
 
 int general_work (int noutput_items, gr_vector_int& ninput_items,
@@ -51,6 +52,8 @@ int general_work (int noutput_items, gr_vector_int& ninput_items,
 		gr_vector_void_star& output_items) {
 
 	const uint8_t *in = (const uint8_t*)input_items[0];
+    gr_complex *out_f = (gr_complex*) output_items[0];
+    gr_complex *out_t = (gr_complex*) output_items[1];
 
 	int i = 0;
 
@@ -58,8 +61,73 @@ int general_work (int noutput_items, gr_vector_int& ninput_items,
 	const uint64_t nread = this->nitems_read(0);
 
 	dout << "Decode MAC: input " << ninput_items[0] << std::endl;
+    dout << "Decode MAC: d_symbols_offset = " << d_symbols_offset
+         << ", d_symbols_len = " << d_symbols_len << std::endl;
+
+	int o = std::min(noutput_items, d_symbols_len - d_symbols_offset);
+
+    if (o > 0) {
+        std::cout << "Decode MAC: publish " << o << " symbols\n";
+
+        std::memcpy(out_t, t_inputs + 80 * d_symbols_offset, o * 80 * sizeof(gr_complex));
+        std::memcpy(out_f, f_inputs + 64 * d_symbols_offset, o * 64 * sizeof(gr_complex));
+
+        if(d_symbols_offset == 0) {
+            pmt::pmt_t dict = pmt::make_dict();
+            dict = pmt::dict_add(dict, pmt::mp("packet_len"), pmt::from_long(length_f_in/64));
+            dict = pmt::dict_add(dict, pmt::mp("No."), pmt::from_long(d_frame_rx_num));
+            add_item_tag(0, nitems_written(0),
+                    pmt::string_to_symbol("packet_len"),
+                    dict,
+                    pmt::string_to_symbol(name()));
+            dout << "Decode MAC: add tag \"packet_len="
+                << length_f_in / 64 << "\" to Port [0]" << std::endl;
+
+            dict = pmt::make_dict();
+            dict = pmt::dict_add(dict, pmt::mp("wifi_start"), pmt::from_long(length_t_in));
+            dict = pmt::dict_add(dict, pmt::mp("No."), pmt::from_long(d_frame_rx_num));
+            add_item_tag(1, nitems_written(0),
+                    pmt::string_to_symbol("wifi_start"),
+                    dict,
+                    pmt::string_to_symbol(name()));
+            dout << "Decode MAC: add tag \"wifi_start="
+                << length_t_in << "\" to Port [1]" << std::endl;
+        }
+
+        d_symbols_offset += o;
+
+        if(d_symbols_offset == d_symbols_len) {
+            d_symbols_offset = 0;
+            d_symbols_len = 0;
+            d_frame_rx_num ++;
+            std::cout << "Decode MAC: d_frame_rx_num = " << d_frame_rx_num << std::endl;
+        }
+        dout << "Decode MAC: output " << o << " symbols\n";
+        return o;
+    }
 
 	while(i < ninput_items[0]) {
+
+        get_tags_in_range(tags, 0, nread + i, nread + i + 1,
+            pmt::string_to_symbol("wifi_last"));
+
+		if(tags.size()) {
+			pmt::pmt_t pair = tags[0].value;
+
+            length_t_in = pmt::blob_length(pmt::cdr(pair)) / sizeof(gr_complex);
+            const gr_complex *t_in = reinterpret_cast<const gr_complex *>(pmt::blob_data(pmt::cdr(pair)));
+            memcpy(t_inputs, t_in, length_t_in * sizeof(gr_complex));
+
+            length_f_in = pmt::blob_length(pmt::car(pair)) / sizeof(gr_complex);
+            const gr_complex *f_in = reinterpret_cast<const gr_complex *>(pmt::blob_data(pmt::car(pair)));
+            memcpy(f_inputs, f_in, length_f_in * sizeof(gr_complex));
+
+            if (length_t_in / 80 != length_f_in / 64) {
+                std::cout << ">>> Warning: Decode MAC: length_t_in mismatches length_f_in" << std::endl;
+            }
+            dout << "DECODE MAC: capture \"wifi_last\" tag: received " << length_t_in << " t samples, and "
+              << length_f_in << " f samples" << std::endl;
+        }
 
 		get_tags_in_range(tags, 0, nread + i, nread + i + 1,
 			pmt::string_to_symbol("wifi_start"));
@@ -69,6 +137,8 @@ int general_work (int noutput_items, gr_vector_int& ninput_items,
 				dout << "Warning: starting to receive new frame before old frame was complete" << std::endl;
 				dout << "Already copied " << copied << " out of " << d_frame.n_sym << " symbols of last frame" << std::endl;
 			}
+            d_symbols_len = 0;
+            d_symbols_offset = 0;
 			d_frame_complete = false;
 
 			pmt::pmt_t dict = tags[0].value;
@@ -96,7 +166,7 @@ int general_work (int noutput_items, gr_vector_int& ninput_items,
 		}
 
 		if(copied < d_frame.n_sym) {
-			dout << "copy one symbol, copied " << copied << " out of " << d_frame.n_sym << std::endl;
+			// dout << "copy one symbol, copied " << copied << " out of " << d_frame.n_sym << std::endl;
 			std::memcpy(d_rx_symbols + (copied * 48), in, 48);
 			copied++;
 
@@ -105,7 +175,11 @@ int general_work (int noutput_items, gr_vector_int& ninput_items,
 				decode();
 				in += 48;
 				i++;
-				d_frame_complete = true;
+                d_frame_complete = true;
+                if (decode_success) {
+                    d_symbols_len = length_f_in / 64;
+                    std::cout << "Decode MAC: decode successful, d_symbols_len = " << d_symbols_len << std::endl;
+                }
 				break;
 			}
 		}
@@ -119,8 +193,18 @@ int general_work (int noutput_items, gr_vector_int& ninput_items,
 	return 0;
 }
 
-void decode() {
+void forecast (int noutput_items, gr_vector_int &ninput_items_required) {
 
+	if(d_symbols_len) {
+		ninput_items_required[0] = 0;
+	}
+    else {
+		ninput_items_required[0] = noutput_items;
+	}
+}
+
+void decode() {
+    decode_success = false;
 	for(int i = 0; i < d_frame.n_sym * 48; i++) {
 		for(int k = 0; k < d_ofdm.n_bpsc; k++) {
 			d_rx_bits[i*d_ofdm.n_bpsc + k] = !!(d_rx_symbols[i] & (1 << k));
@@ -153,7 +237,11 @@ void decode() {
 	dict = pmt::dict_add(dict, pmt::mp("nomfreq"), pmt::from_double(d_nom_freq));
 	dict = pmt::dict_add(dict, pmt::mp("freqofs"), pmt::from_double(d_freq_offset));
 	dict = pmt::dict_add(dict, pmt::mp("dlt"), pmt::from_long(LINKTYPE_IEEE802_11));
+	dict = pmt::dict_add(dict, pmt::mp("crc_included"), pmt::PMT_F);    // for connection with mapper
 	message_port_pub(pmt::mp("out"), pmt::cons(dict, blob));
+    d_frame_num ++;
+    std::cout << "Decode MAC: d_frame_num = " << d_frame_num << std::endl;
+    decode_success = true;
 }
 
 void deinterleave() {
@@ -243,6 +331,17 @@ private:
 
 	int copied;
 	bool d_frame_complete;
+
+    // TODO: replace 100 with MAX_SYM
+    gr_complex f_inputs[64*100];
+    gr_complex t_inputs[80*100];
+    int length_t_in;
+    int length_f_in;
+	int d_symbols_offset = 0;
+	int d_symbols_len = 0;
+    bool decode_success;
+    int d_frame_num = 0;
+    int d_frame_rx_num = 0;
 };
 
 decode_mac::sptr

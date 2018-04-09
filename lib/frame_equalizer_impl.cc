@@ -36,7 +36,7 @@ frame_equalizer::make(Equalizer algo, double freq, double bw, bool log, bool deb
 
 frame_equalizer_impl::frame_equalizer_impl(Equalizer algo, double freq, double bw, bool log, bool debug) :
 	gr::block("frame_equalizer",
-			gr::io_signature::make(1, 1, 64 * sizeof(gr_complex)),
+			gr::io_signature::make2(2, 2, 64 * sizeof(gr_complex), 80 * sizeof(gr_complex)),
 			gr::io_signature::make(1, 1, 48)),
 	d_current_symbol(0), d_log(log), d_debug(debug), d_equalizer(NULL),
 	d_freq(freq), d_bw(bw), d_frame_bytes(0), d_frame_symbols(0),
@@ -102,6 +102,7 @@ frame_equalizer_impl::set_frequency(double freq) {
 void
 frame_equalizer_impl::forecast (int noutput_items, gr_vector_int &ninput_items_required) {
 	ninput_items_required[0] = noutput_items;
+	ninput_items_required[1] = noutput_items;
 }
 
 int
@@ -113,35 +114,45 @@ frame_equalizer_impl::general_work (int noutput_items,
 	gr::thread::scoped_lock lock(d_mutex);
 
 	const gr_complex *in = (const gr_complex *) input_items[0];
+	const gr_complex *in_t = (const gr_complex *) input_items[1];
 	uint8_t *out = (uint8_t *) output_items[0];
 
 	int i = 0;
+    int i_t = 0;
 	int o = 0;
+
 	gr_complex symbols[48];
 	gr_complex current_symbol[64];
 
-	dout << "FRAME EQUALIZER: input " << ninput_items[0] << "  output " << noutput_items << std::endl;
+    dout << "FRAME_EQUALIZER: ninput_items[0] = " << ninput_items[0] << ", ninput_items[1] = " << ninput_items[1]
+        << ", noutput_items = " << noutput_items << std::endl;
 
-	while((i < ninput_items[0]) && (o < noutput_items)) {
+	while((i < ninput_items[0]) && (i_t < ninput_items[1]) && (o < noutput_items)) {
 
 		get_tags_in_window(tags, 0, i, i + 1, pmt::string_to_symbol("wifi_start"));
 
 		// new frame
 		if(tags.size()) {
+            if(d_current_symbol < d_frame_symbols + 3 && d_current_symbol != 0) {
+                std::cout << ">>> Warning: Frame equalizer: received new tag at "
+                    << i << ", when processing symbols "
+                    << d_current_symbol << "/" << d_frame_symbols + 3 << std::endl;
+            }
 			d_current_symbol = 0;
-			d_frame_symbols = 0;
+			d_frame_symbols = 0;    // No. of DATA symbols (LTFs and SIGNAL excluded)
 			d_frame_mod = d_bpsk;
 
 			d_freq_offset_from_synclong = pmt::to_double(tags.front().value) * d_bw / (2 * M_PI);
 			d_epsilon0 = pmt::to_double(tags.front().value) * d_bw / (2 * M_PI * d_freq);
 			d_er = 0;
 
-			dout << "epsilon: " << d_epsilon0 << std::endl;
+			dout << "FRAME_EQUALIZER: epsilon: " << d_epsilon0 << std::endl;
 		}
 
 		// not interesting -> skip
 		if(d_current_symbol > (d_frame_symbols + 2)) {
 			i++;
+            i_t++;
 			continue;
 		}
 
@@ -195,7 +206,6 @@ frame_equalizer_impl::general_work (int noutput_items,
 
 		// update estimate of residual frequency offset
 		if(d_current_symbol >= 2) {
-
 			double alpha = 0.1;
 			d_er = (1-alpha) * d_er + alpha * er;
 		}
@@ -204,11 +214,12 @@ frame_equalizer_impl::general_work (int noutput_items,
 		d_equalizer->equalize(current_symbol, d_current_symbol,
 				symbols, out + o * 48, d_frame_mod);
 
+        memcpy(symbol_inputs_t + 80 * d_current_symbol, in_t + 80 * i_t, 80 * sizeof(gr_complex));
+
 		// signal field
 		if(d_current_symbol == 2) {
 
 			if(decode_signal_field(out + o * 48)) {
-
 				pmt::pmt_t dict = pmt::make_dict();
 				dict = pmt::dict_add(dict, pmt::mp("frame_bytes"), pmt::from_uint64(d_frame_bytes));
 				dict = pmt::dict_add(dict, pmt::mp("encoding"), pmt::from_uint64(d_frame_encoding));
@@ -220,20 +231,42 @@ frame_equalizer_impl::general_work (int noutput_items,
 						pmt::string_to_symbol("wifi_start"),
 						dict,
 						pmt::string_to_symbol(alias()));
+
+				// Store the input symbols of LTF + SIGNAL + DATA symbols (d_frame_symbols long)
+				memcpy(symbol_inputs_f, ltf, 128 * sizeof(gr_complex));
+                memcpy(symbol_inputs_f + 64 * d_current_symbol, current_symbol, 64 * sizeof(gr_complex));
 			}
 		}
-
-		if(d_current_symbol > 2) {
+		else if(d_current_symbol > 2) {
 			o++;
-			pmt::pmt_t pdu = pmt::make_dict();
 			message_port_pub(pmt::mp("symbols"), pmt::cons(pmt::make_dict(), pmt::init_c32vector(48, symbols)));
+			memcpy(symbol_inputs_f + 64 * d_current_symbol, current_symbol, 64 * sizeof(gr_complex));
+
+			if (d_current_symbol == d_frame_symbols + 2) {	// last DATA symbol
+				dout << "FRAME_EQUALIZER: Reached the last symbol. Publish rx signals" << std::endl;
+				pmt::pmt_t dict = pmt::make_dict();
+				dict = pmt::dict_add(dict, pmt::mp("frame_bytes"), pmt::from_uint64(d_frame_bytes));
+				dict = pmt::dict_add(dict, pmt::mp("encoding"), pmt::from_uint64(d_frame_encoding));
+				add_item_tag(0, nitems_written(0),
+						pmt::string_to_symbol("wifi_last"),
+                        pmt::cons(pmt::init_c32vector((d_frame_symbols + 3) * 64, symbol_inputs_f),
+                            pmt::init_c32vector((d_frame_symbols + 3) * 80, symbol_inputs_t)),
+						pmt::string_to_symbol(name()));
+			}
+		}
+		else { // copy LTFs
+			memcpy(ltf + d_current_symbol * 64, current_symbol, 64 * sizeof(gr_complex));
 		}
 
 		i++;
+        i_t++;
 		d_current_symbol++;
 	}
 
 	consume(0, i);
+    consume(1, i_t);
+    dout << "FRAME_EQUALIZER: consume(0, " << i << "), consume(1," << i_t << "), o = "
+        << o << std::endl;
 	return o;
 }
 

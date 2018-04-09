@@ -121,6 +121,10 @@ list(APPEND gr_ieee802_11_sources
     sync_short.cc
     utils.cc
     viterbi_decoder/base.cc
+    ofdm_carrier_allocator_cvc_impl.cc
+    frame_reconstructor_impl.cc
+    frame_truncate_impl.cc
+    sync_long_side.cc
 )
 
 # use SSE2 optimized viterbi implementation if SSE2 is enabled

@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 
 <block>
-	<name>WiFi Frame Equalizer</name>
-	<key>ieee802_11_frame_equalizer</key>
+	<name>WiFi Frame Reconstructor</name>
+	<key>ieee802_11_frame_reconstructor</key>
 	<category>[IEEE802.11]</category>
 	<import>import ieee802_11</import>
-	<make>ieee802_11.frame_equalizer($algo, $freq, $bw, $log, $debug)</make>
+	<make>ieee802_11.frame_reconstructor($algo, $freq, $bw, $log, $debug)</make>
 	<callback>set_algorithm($algo)</callback>
 	<callback>set_frequency($freq)</callback>
 	<callback>set_bandwidth($bw)</callback>
@@ -81,30 +81,24 @@
 	</param>
 
 	<sink>
-		<name>f_in</name>
+		<name>recover_in</name>
 		<type>complex</type>
 		<vlen>64</vlen>
 		<nports>1</nports>
 	</sink>
 
 	<sink>
-		<name>t_in</name>
+		<name>f_in</name>
 		<type>complex</type>
-		<vlen>80</vlen>
+		<vlen>64</vlen>
 		<nports>1</nports>
 	</sink>
 
 	<source>
 		<name>out</name>
-		<type>byte</type>
-		<vlen>48</vlen>
+		<type>complex</type>
+		<vlen>64</vlen>
 		<nports>1</nports>
-	</source>
-
-	<source>
-		<name>symbols</name>
-		<type>message</type>
-        <optional>1</optional>
 	</source>
 
 </block>

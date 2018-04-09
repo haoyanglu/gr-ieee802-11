@@ -14,7 +14,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <ieee802-11/sync_long.h>
+
+/*
+ * Output cyclic prefix
+ */
+#include <ieee802-11/sync_long_side.h>
 #include "utils.h"
 #include <gnuradio/io_signature.h>
 #include <gnuradio/filter/fir_filter.h>
@@ -27,14 +31,14 @@ using namespace gr::ieee802_11;
 using namespace std;
 
 
-bool compare_abs(const std::pair<gr_complex, int>& first, const std::pair<gr_complex, int>& second) {
+bool compare_abs1(const std::pair<gr_complex, int>& first, const std::pair<gr_complex, int>& second) {
 	return abs(get<0>(first)) > abs(get<0>(second));
 }
 
-class sync_long_impl : public sync_long {
+class sync_long_side_impl : public sync_long_side {
 
 public:
-sync_long_impl(unsigned int sync_length, bool log, bool debug) : block("sync_long",
+sync_long_side_impl(unsigned int sync_length, bool log, bool debug) : block("sync_long_side",
 		gr::io_signature::make2(2, 2, sizeof(gr_complex), sizeof(gr_complex)),
 		gr::io_signature::make(1, 1, sizeof(gr_complex))),
 		d_fir(gr::filter::kernel::fir_filter_ccc(1, LONG)),
@@ -48,7 +52,7 @@ sync_long_impl(unsigned int sync_length, bool log, bool debug) : block("sync_lon
 	d_correlation = gr::fft::malloc_complex(8192);
 }
 
-~sync_long_impl(){
+~sync_long_side_impl(){
 	gr::fft::free(d_correlation);
 }
 
@@ -125,10 +129,18 @@ int general_work (int noutput, gr_vector_int& ninput_items,
 						pmt::string_to_symbol("wifi_start"),
 						pmt::from_double(d_freq_offset_short - d_freq_offset),
 						pmt::string_to_symbol(name()));
+                std::cout << "Sync long side -- wifi_start" << std::endl;
 			}
 
+            /*
 			if(rel >= 0 && (rel < 128 || ((rel - 128) % 80) > 15)) {
 				out[o] = in_delayed[i] * exp(gr_complex(0, d_offset * d_freq_offset));
+				o++;
+			}
+            */
+            // Output samples with cyclic prefix (LTF + SIGNAL + DATA symbols)
+			if(rel >= -32) {
+				out[o] = in_delayed[i]; // * exp(gr_complex(0, d_offset * d_freq_offset));
 				o++;
 			}
 
@@ -138,13 +150,13 @@ int general_work (int noutput, gr_vector_int& ninput_items,
 
 		break;
 
-	case RESET: {
+	case RESET:
 		while(o < noutput) {
-			if(((d_count + o) % 64) == 0) {
+			if(((d_count + o) % 80) == 0) {
 				d_offset = 0;
 				d_state = SYNC;
-                std::cout << "Sync long: d_count = " << d_count
-                    << " (" << d_count / 64 << ") symbols"<< std::endl;
+                std::cout << "Sync long side: d_count = " << d_count
+                    << " (" << d_count / 80 << ") symbols"<< std::endl;
 				break;
 			} else {
 				out[o] = 0;
@@ -153,7 +165,6 @@ int general_work (int noutput, gr_vector_int& ninput_items,
 		}
 
 		break;
-	}
 	}
 
 	dout << "produced : " << o << " consumed: " << i << std::endl;
@@ -182,7 +193,7 @@ void search_frame_start() {
 
 	// sort list (highest correlation first)
 	assert(d_cor.size() == SYNC_LENGTH);
-	d_cor.sort(compare_abs);
+	d_cor.sort(compare_abs1);
 
 	// copy list in vector for nicer access
 	vector<pair<gr_complex, int> > vec(d_cor.begin(), d_cor.end());
@@ -237,15 +248,17 @@ private:
 	const bool d_debug;
 	const int  SYNC_LENGTH;
 
+	gr::thread::mutex d_mutex;
+
 	static const std::vector<gr_complex> LONG;
 };
 
-sync_long::sptr
-sync_long::make(unsigned int sync_length, bool log, bool debug) {
-	return gnuradio::get_initial_sptr(new sync_long_impl(sync_length, log, debug));
+sync_long_side::sptr
+sync_long_side::make(unsigned int sync_length, bool log, bool debug) {
+	return gnuradio::get_initial_sptr(new sync_long_side_impl(sync_length, log, debug));
 }
 
-const std::vector<gr_complex> sync_long_impl::LONG = {
+const std::vector<gr_complex> sync_long_side_impl::LONG = {
 
 gr_complex(-0.0455, -1.0679), gr_complex( 0.3528, -0.9865), gr_complex( 0.8594,  0.7348), gr_complex( 0.1874,  0.2475),
 gr_complex( 0.5309, -0.7784), gr_complex(-1.0218, -0.4897), gr_complex(-0.3401, -0.9423), gr_complex( 0.8657, -0.2298),

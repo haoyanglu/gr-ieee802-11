@@ -250,7 +250,7 @@ void parse_data(char *buf, int length) {
 	dout << std::endl;
 
 	int seq_no = int(h->seq_nr >> 4);
-	dout << "seq nr: " << seq_no << std::endl;
+    std::cout << "seq nr: " << seq_no << std::endl;
 	dout << "mac 1: ";
 	print_mac_address(h->addr1, true);
 	dout << "mac 2: ";
